@@ -1,0 +1,6 @@
+AWS CloudFormation
+
+Create a basic setup of your infrastructure code and Cloud provider.
+Create a simple definition of any Cloud resource.
+Verify connectivity with Cloud provider.
+Deploy any resource using infrastructure code to verify connectivity to the Cloud provider.
