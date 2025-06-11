@@ -1,0 +1,148 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infrastructure setup with VPC, Load Balancer, Lambda, S3, and Secrets Manager with VPC endpoints
+
+Resources:
+  # VPC
+  MyVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  # Subnets (2 required for Load Balancer)
+  MySubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.1.0/24'
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+
+  MySubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.2.0/24'
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+
+  # Route Tables for Subnets
+  MyRouteTable1:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref MyVPC
+
+  MyRouteTable2:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref MyVPC
+
+  # Subnet Route Table Associations
+  MySubnetRouteTableAssociation1:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref MySubnet1
+      RouteTableId: !Ref MyRouteTable1
+
+  MySubnetRouteTableAssociation2:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref MySubnet2
+      RouteTableId: !Ref MyRouteTable2
+
+  # Security Group
+  MySecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Allow Lambda access'
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: 'tcp'
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: 'tcp'
+          FromPort: 443
+          ToPort: 443
+          CidrIp: '10.0.0.0/16'  # Allow from within VPC
+
+  # Load Balancer
+  MyLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Name: 'MyLoadBalancer'
+      Subnets:
+        - Ref: MySubnet1
+        - Ref: MySubnet2
+      SecurityGroups:
+        - Ref: MySecurityGroup
+      Scheme: 'internal'
+      LoadBalancerAttributes:
+        - Key: 'idle_timeout.timeout_seconds'
+          Value: '60'
+
+  # Lambda Execution Role
+  MyLambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+  # Lambda Function
+  MyLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: 'lambda_function.lambda_handler' 
+      Role: !GetAtt MyLambdaExecutionRole.Arn
+      FunctionName: 'MyLambdaFunction'
+      Code:
+        S3Bucket: 'my-unique-bucket-name-cfpractask-jun'
+        S3Key: 'lambda-code.zip'
+      Runtime: 'python3.9'     
+      VpcConfig:
+        SubnetIds:
+          - Ref: MySubnet1
+          - Ref: MySubnet2
+        SecurityGroupIds:
+          - Ref: MySecurityGroup
+
+  # Secrets Manager
+  MySecret:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: 'MySecret'
+      SecretString: '{"username":"admin","password":"password123"}'
+
+  # VPC Gateway Endpoint for S3 (attached to route tables)
+  S3GatewayEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcId: !Ref MyVPC
+      RouteTableIds:
+        - !Ref MyRouteTable1
+        - !Ref MyRouteTable2
+      VpcEndpointType: Gateway
+
+  # VPC Interface Endpoint for Secrets Manager
+  SecretsManagerEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.secretsmanager'
+      VpcId: !Ref MyVPC
+      SubnetIds:
+        - !Ref MySubnet1
+        - !Ref MySubnet2
+      SecurityGroupIds:
+        - !Ref MySecurityGroup
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true  # ADD THIS LINE

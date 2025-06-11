@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: S3 bucket for storing Lambda deployment package
+
+Resources:
+  LambdaCodeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: my-unique-bucket-name-cfpractask-jun
+
+  LambdaCodeBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LambdaCodeBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${LambdaCodeBucket.Arn}/lambda-code.zip'
+
+Outputs:
+  BucketName:
+    Value: !Ref LambdaCodeBucket
+    Description: The name of the Lambda code bucket

@@ -1,0 +1,1 @@
+{"statusCode": 200, "body": "{\"message\": \"Success\", \"secret\": \"admin\", \"s3Objects\": [\"lambda-code.zip\"]}"}
