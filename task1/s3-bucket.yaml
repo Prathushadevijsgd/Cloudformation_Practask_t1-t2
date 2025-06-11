@@ -5,4 +5,4 @@ Resources:
   MyS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: cloudformation-practask  # Change this to a globally unique name
+      BucketName: cloudformation-practask  
