@@ -1,0 +1,16 @@
+1. Create the IaC setup.
+
+a. Add the code to deploy the following resources: dedicated space for resources (resource group, etc.), private network, public endpoint, load balancer, vault (secret manager or similar service), serverless function, storage account.
+b. The public endpoint (IP) should be bounded to the load balancer, load balancer should balance traffic for the function and have connectivity only to this function.
+c. All resources, except load balancer, should be deployed in a private network. Access between these resources should use only a private network.
+d. Add IAM permissions for the resources: the function should have access to the storage account (not all available storage accounts) and vault (secret manager or similar service).
+e. Add a code for the connection between the function, storage account and vault (secret manager or similar service). It should have both IAM and private networking access.
+
+2. Add a simple code for the function.
+a. Function should be able to take a value from the Vault (secret manager or similar service) and print its value. To test connectivity between the function and vault.
+b. By call to the function it should be able to list all the files in the storage account and return it as a response. To test connectivity between the function and storage account.
+
+3. Deploy resources and verify the whole setup.
+a. Verify the infrastructure setup. Check if resources have IAM and private networking access to each other, check if no resources are exposed to the internet.
+b. Verify the function setup. Check if the function can retrieve a value from the Vault (secret manager or similar service), and get a list of the files from the storage account.
+
